@@ -2,13 +2,15 @@
 // Learn a remote channel: hold down button on blinds for 3 seconds until Jog Jog, then CONFIRM on channel to learn
 // Make a blind forget a channel: hit confirm roughly 10 times in a row, short clicks. All blinds on channel will forget.
 // Set limits: hold limit button for 6 seconds until blind double jogs twice. Then tap up to make blind go up, stop to stop when you are close to the upper limit, then tap up or down to move to exact upper limit. Confirm to set upper limit. Repeat for lower limit.
-// Set favorite: poistion blind in "favorite" position (probably all the way closed). Hold hte limit button and immediately push the up button (LU in code below). The blind will jog to show recognition. Now the stop button doubles as a favorite button if the blinds have been unmoving for three seconds, or are at the upper or lower limit.
+// Set favorite: poistion blind in "favorite" position (probably all the way closed). Hold the limit button and immediately push the up button (LU in code below). The blind will jog to show recognition. Now the stop button doubles as a favorite button if the blinds have been unmoving for three seconds, or are at the upper or lower limit.
 
 #include <ESP8266WiFi.h>
+#include <PubSubClient.h>
 #include "login.h" //provides ssid and password
 
 //Setup a server
-WiFiServer server(80);
+WiFiClient espClient;
+PubSubClient MQTTClient(espClient);
 
 //Declare Constants
 int LEDPIN = 13; // GPIO13
@@ -59,10 +61,32 @@ void setup() {
   }
   Serial.println("");
   Serial.println("WiFi connected");
+
+  //MQTT Server connect
+  
+  MQTTClient.setServer(mqttServer, mqttPort);
+  MQTTClient.setCallback(callback);
  
-  // Start the server
-  server.begin();
-  Serial.println("Server started");
+  while (!MQTTClient.connected()) {
+    Serial.println("Connecting to MQTT...");
+ 
+    if (MQTTClient.connect("ESP8266Client", mqttUser, mqttPassword )) {
+ 
+      Serial.println("connected");  
+ 
+    } else {
+ 
+      Serial.print("failed with state ");
+      Serial.print(MQTTClient.state());
+      delay(2000);
+ 
+    }
+  }
+
+ //MQTT Subscriptions
+  MQTTClient.publish("esp/test", "Hello from ESP8266");
+  MQTTClient.subscribe("esp/test");
+  MQTTClient.subscribe("blinds");
  
   // Print the IP address
   Serial.print("Use this URL to connect: ");
@@ -71,68 +95,26 @@ void setup() {
   Serial.println("/");
  
 }
+
+
+void callback(char* topic, byte* payload, unsigned int length) {
+ 
+  Serial.print("Message arrived in topic: ");
+  Serial.println(topic);
+ 
+  Serial.print("Message:");
+  for (int i = 0; i < length; i++) {
+    Serial.print((char)payload[i]);
+  }
+ 
+  Serial.println();
+  Serial.println("-----------------------");
+  sendFullCommand();
+}
+
  
 void loop() {
-  // Check if a client has connected
-  WiFiClient client = server.available();
-  if (!client) {
-    return;
-  }
- 
-  // Wait until the client sends some data
-  Serial.println("new client");
-  while(!client.available()){
-    delay(1);
-  }
- 
-  // Read the first line of the request
-  String request = client.readStringUntil('\r');
-  Serial.println(request);
-  client.flush();
- 
-  // Match the request
- 
-  int value = LOW;
-  if (request.indexOf("/LED=ON") != -1)  {
-    int i;
-   
-    for (i = 0; i < 8; i++) {
-      sendFullCommand();
-    }
-    value = HIGH;
-    //Serial.println("Sent command");
-    
-  }
-  if (request.indexOf("/LED=OFF") != -1)  {
-    value = LOW;
-  }
- 
-// Set ledPin according to the request
-//digitalWrite(ledPin, value);
- 
-  // Return the response
-  client.println("HTTP/1.1 200 OK");
-  client.println("Content-Type: text/html");
-  client.println(""); //  do not forget this one
-  client.println("<!DOCTYPE HTML>");
-  client.println("<html>");
- 
-  client.print("Led pin is now: ");
- 
-  if(value == HIGH) {
-    client.print("On");
-  } else {
-    client.print("Off");
-  }
-  client.println("<br><br>");
-  client.println("<a href=\"/LED=ON\"\"><button>Turn On </button></a>");
-  client.println("<a href=\"/LED=OFF\"\"><button>Turn Off </button></a><br />");  
-  client.println("</html>");
- 
-  delay(1);
-  Serial.println("Client disonnected");
-  Serial.println("");
- 
+  MQTTClient.loop(); 
 }
 
 
@@ -143,17 +125,20 @@ void sendFullCommand() {
     became an issue. Not sure how finicky Arduino and RF transmitters are.*/
   setStopCheck(); 
 
+
   //Send actual commands:
-  sendPreamble();
-  sendRemoteID();
-  sendChannel();
-  sendCommand();
-  sendStopCheck();
-  sendMoveOrConfirm();
-  sendChannelCheck();
-  sendCommandCheck();
-  sendMessageEnd();
-  
+  for (int i = 0; i < 8; i++) {
+    sendPreamble();
+    sendRemoteID();
+    sendChannel();
+    sendCommand();
+    sendStopCheck();
+    sendMoveOrConfirm();
+    sendChannelCheck();
+    sendCommandCheck();
+    sendMessageEnd();
+  }
+  Serial.print("RF Command sent");
 }
 
 
