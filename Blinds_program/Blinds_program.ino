@@ -1,3 +1,5 @@
+
+
 // Codes are as follows on original BY-305 remote:
 // Learn a remote channel: hold down button on blinds for 3 seconds until Jog Jog, then CONFIRM on channel to learn
 // Make a blind forget a channel: hit confirm roughly 10 times in a row, short clicks. All blinds on channel will forget.
@@ -6,6 +8,7 @@
 
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
+#include <ArduinoJson.h>
 #include "login.h" //provides ssid and password
 
 //Setup a server
@@ -110,6 +113,39 @@ void callback(char* topic, byte* payload, unsigned int length) {
   Serial.println();
   Serial.println("-----------------------");
   sendFullCommand();
+
+//Make this its own function called Messageaprser(). Justr need to find a way to pass the payload
+
+  Serial.println("Parsing start: ");
+ 
+  char JSONMessage[] = " {\"SensorType\": \"Temperature\", \"Value\": 11}"; //Original message
+
+    Serial.println(JSONMessage);
+ 
+  StaticJsonDocument<300> JSONDocument;                         //Memory pool
+  DeserializationError err = deserializeJson(JSONDocument,payload); //Parse message
+ 
+  if (err) {   //Check for errors in parsing
+
+    Serial.println("Parsing failed. ERROR:");
+    Serial.println(err.c_str());
+    delay(5000);
+    return;
+
+  }
+ 
+  const char* sensorType = JSONDocument["SensorType"]; //Get sensor type value
+  int value = JSONDocument["Value"];                    //Get value of sensor measurement
+ 
+  Serial.print("Sensor type: ");
+  Serial.println(sensorType);
+  Serial.print("Sensor value: ");
+  Serial.println(value);
+ 
+  Serial.println();
+  delay(5000);
+  //End Message parser()
+  
 }
 
  
@@ -615,4 +651,39 @@ void byteFinal(void) {
   delayMicroseconds(BITLENGTH);
   digitalWrite(13,LOW);
 }
+
+
+void messageParser() {
+ /*
+  Serial.println("Parsing start: ");
+ 
+  char JSONMessage[] = " {\"SensorType\": \"Temperature\", \"Value\": 10}"; //Original message
+
+    Serial.println(JSONMessage);
+ 
+  StaticJsonDocument<300> JSONDocument;                         //Memory pool
+  DeserializationError err = deserializeJson(JSONDocument,JSONMessage); //Parse message
+ 
+  if (err) {   //Check for errors in parsing
+
+    Serial.println("Parsing failed. ERROR:");
+    Serial.println(err.c_str());
+    delay(5000);
+    return;
+
+  }
+ 
+  const char* sensorType = JSONDocument["SensorType"]; //Get sensor type value
+  int value = JSONDocument["Value"];                    //Get value of sensor measurement
+ 
+  Serial.print("Sensor type: ");
+  Serial.println(sensorType);
+  Serial.print("Sensor value: ");
+  Serial.println(value);
+ 
+  Serial.println();
+  delay(5000);
+ */
+}
+
  
