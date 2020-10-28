@@ -15,17 +15,21 @@ WiFiClient espClient;
 PubSubClient MQTTClient(espClient);
 
 //Declare Constants
-const int LEDPIN = 13; // GPIO13
+const int GPIOPIN = 13; // GPIO13
 const int BITLENGTH = 350; //in microseconds
 const int PREAMBLE_1 = 11; //Length of 1st series, of 1s in preamble
 const int PREAMBLE_2 = 7; //Length of second series, of 0s in preamble
 const int PREAMBLE_3 = 5; //Length of third series, of 1s in preamble
+const float HOLDPAUSE = 390000; //Number of cycles to pause between commands to signal a hold rather than a tap command.
+const float FIRSTHOLDPAUSE = 342000; //First number of cycles to pause between commands to signal a hold rather than a tap command is slightly shorter
+
 
 //Setup variables
 char blindsChannel = '2';
 char command = 'U';
 char remoteID[] = "1011011011011010";
 char stopCheck = '0';
+char tapOrHold='T';
 
 //Setup functions
 void sendPreamble(void);
@@ -42,6 +46,7 @@ void sendChannelCheck(void);
 void sendCommandCheck(void);
 void sendMessageEnd(void);
 void sendFullCommand(void);
+void sendBaseCommand(void);
 void messageParser(void);
 
 void setup() {
@@ -49,7 +54,7 @@ void setup() {
   Serial.println();
   delay(10);
 
-  pinMode(LEDPIN, OUTPUT);
+  pinMode(GPIOPIN, OUTPUT);
 
 
   // Connect to WiFi network
@@ -118,25 +123,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
   Serial.println("-----------------------");
   //sendFullCommand();
 
-  Serial.println("Before parser:");
-  Serial.print("RemoteID: ");
-  Serial.println(remoteID);
-  Serial.print("Channel: ");
-  Serial.println(blindsChannel);
-  Serial.print("Command: ");
-  Serial.println(command);
-
   messageParser(payload);
-
-  Serial.println("After parser:");
-  Serial.print("RemoteID: ");
-  Serial.println(remoteID);
-  Serial.print("Channel: ");
-  Serial.println(blindsChannel);
-  Serial.print("Command: ");
-  Serial.println(command);
-
-
+  sendFullCommand();
+  
 }
 
 
@@ -150,10 +139,30 @@ void loop() {
 void sendFullCommand() {
   /*Necessary to run setStopCheck first so it can be used in sendChannelCheck. I kept all the sends together in case clock speed
     became an issue. Not sure how finicky Arduino and RF transmitters are.*/
-  setStopCheck();
+
+  //Send actual commands:  
+  sendBaseCommand();
+
+  //Repeat command after 1000 cycles off if a hold (as opposed to a tap) command.
+  //Do this a couple times to make sure the blinds grab it.
+  if (tapOrHold=='H') {
+    //This "holding down the button" takes long enough that ESP will think it's in a loop, so we
+    //Disable the Software Watchdog
+    ESP.wdtDisable();
+    delayMicroseconds(FIRSTHOLDPAUSE);
+    for (int i = 0; i < 3; i++) {
+       sendBaseCommand();
+       delayMicroseconds(HOLDPAUSE);
+    }
+    //Reenable Software watchdog
+    ESP.wdtEnable(1000);
+  }
+  
+  Serial.print("RF Command sent");
+}
 
 
-  //Send actual commands:
+void sendBaseCommand() {
   for (int i = 0; i < 8; i++) {
     sendPreamble();
     sendRemoteID();
@@ -165,7 +174,6 @@ void sendFullCommand() {
     sendCommandCheck();
     sendMessageEnd();
   }
-  Serial.print("RF Command sent");
 }
 
 
@@ -602,11 +610,11 @@ void sendPreamble() {
   // 6125 = BITLENGTH * 7
   // 4375 = BITLENGTH * 5
 
-  digitalWrite(13, HIGH);
+  digitalWrite(GPIOPIN, HIGH);
   delayMicroseconds(a);
-  digitalWrite(13, LOW);
+  digitalWrite(GPIOPIN, LOW);
   delayMicroseconds(b);
-  digitalWrite(13, HIGH);
+  digitalWrite(GPIOPIN, HIGH);
   delayMicroseconds(c);
 
 }
@@ -614,35 +622,34 @@ void sendPreamble() {
 //The message bytes are three bit bytes. This took forever to decode because of the preamble being different:
 
 void byte0(void) {
-  digitalWrite(13, LOW);
+  digitalWrite(GPIOPIN, LOW);
   delayMicroseconds(BITLENGTH);
-  digitalWrite(13, HIGH);
+  digitalWrite(GPIOPIN, HIGH);
   delayMicroseconds(BITLENGTH);
-  digitalWrite(13, LOW);
+  digitalWrite(GPIOPIN, LOW);
   delayMicroseconds(BITLENGTH);
 }
 
 void byte1(void) {
-  digitalWrite(13, LOW);
+  digitalWrite(GPIOPIN, LOW);
   delayMicroseconds(BITLENGTH);
-  digitalWrite(13, HIGH);
+  digitalWrite(GPIOPIN, HIGH);
   delayMicroseconds(BITLENGTH);
-  digitalWrite(13, HIGH);
+  digitalWrite(GPIOPIN, HIGH);
   delayMicroseconds(BITLENGTH);
-  digitalWrite(13, LOW);
+  digitalWrite(GPIOPIN, LOW);
 }
 
 //Special final byte only used at message end:
 void byteFinal(void) {
-  digitalWrite(13, HIGH);
+  digitalWrite(GPIOPIN, HIGH);
   delayMicroseconds(BITLENGTH);
-  digitalWrite(13, HIGH);
+  digitalWrite(GPIOPIN, HIGH);
   delayMicroseconds(BITLENGTH);
-  digitalWrite(13, HIGH);
+  digitalWrite(GPIOPIN, HIGH);
   delayMicroseconds(BITLENGTH);
-  digitalWrite(13, LOW);
+  digitalWrite(GPIOPIN, LOW);
 }
-
 
 void messageParser(byte* payload) {
   Serial.println();
@@ -666,11 +673,14 @@ void messageParser(byte* payload) {
   const char* remoteID_J = JSONDocument["remoteID"]; //Get remoteID
   const char* channel_J = JSONDocument["channel"]; //Get blindsChannel
   const char* command_J  = JSONDocument["command"]; //Get command
+   const char* tapOrHold_J  = JSONDocument["tapOrHold"]; //Get tapOrHold
 
   std::strcpy(remoteID,remoteID_J);
-  //
+  
+  //ArduinoJSON returns a single character as a one character array. That only took a month to figure out.
   blindsChannel=channel_J[0];
   command=command_J[0];
+  tapOrHold=tapOrHold_J[0];
 
   Serial.println();
   Serial.println("In parser:");
@@ -686,6 +696,10 @@ void messageParser(byte* payload) {
   Serial.println(command_J);
   Serial.print("Command: ");
   Serial.println(command);
+ Serial.print("tapOrHold_J: ");
+  Serial.println(tapOrHold_J);
+  Serial.print("tapOrHold: ");
+  Serial.println(tapOrHold);
 
   Serial.println();
 
