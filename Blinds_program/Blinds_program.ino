@@ -50,7 +50,7 @@ void sendFullCommand(void);
 void sendBaseCommand(void);
 void messageParser(void);
 
-void publishConfig(void);
+void publishBlindsConfig(const char* blindsName,const char* friendlyName);
 
 
 void setup() {
@@ -114,8 +114,12 @@ void setup() {
   Serial.println("/");
 
   //Publish the MQTT startup config
-  publishConfig();
-
+  publishBlindsConfig("homeassistant/cover/kitchenBlinds","Kitchen Blinds");
+  publishBlindsConfig("homeassistant/cover/livingRoomBlinds","Living Room Blinds");
+  publishBlindsConfig("homeassistant/cover/masterBedroomBlinds","Master Bedroom Blinds");
+  publishBlindsConfig("homeassistant/cover/kidsRoomBlinds","Kids Room Blinds");
+  publishBlindsConfig("homeassistant/cover/diningRoomBlinds","Dining Room Blinds");
+  publishBlindsConfig("homeassistant/cover/guestRoomBlinds","Guest Room Blinds");
 }
 
 
@@ -717,76 +721,52 @@ void messageParser(byte* payload) {
 
 
 //MQTT Sections
-void publishConfig() {
-  const int capacity = JSON_OBJECT_SIZE(25);
-  StaticJsonDocument<capacity> kitchenConfig;
+void publishBlindsConfig(const char* blindsName, const char* friendlyName) {
+
+  //Set up the command topic root address to save space (not sure if it actually saves space, but means I can avoid string concatenation, so yay.
+  char configTopic[100]{};
+
+  std::strcat(configTopic,blindsName);
+  Serial.println(configTopic);
+  std::strcat(configTopic,"/config");
+  Serial.println(configTopic);
   
-  kitchenConfig["name"] = "Kitchen Blinds";
-  kitchenConfig["command_topic"] = "homeassistant/cover/kitchenBlinds/position/set";
-  kitchenConfig["state_topic"] = "homeassistant/cover/kitchenBlinds/position/state";
-  //kitchenConfig["availability_topic"] = "homeassistant/cover/kitchenBlinds/availability";
-  kitchenConfig["qos"] = 0;
-  kitchenConfig["retain"] = true;
-  kitchenConfig["payload_open"] = "U";
-  kitchenConfig["payload_close"] = "D";
-  kitchenConfig["payload_stop"] = "S";
-  kitchenConfig["state_open"] = "open";
-  kitchenConfig["state_opening"] = "opening";
-  kitchenConfig["state_closed"] = "closed";
-  kitchenConfig["state_closing"] = "closing";
-  kitchenConfig["payload_available"] = "online";
-  kitchenConfig["payload_not_available"] = "offline";
-  kitchenConfig["optimistic"] = true;
-  kitchenConfig["value_template"] = "'{{value_template}}'";
-  kitchenConfig["tilt_command_topic"] = "homeassistant/cover/kitchenBlinds/tilt/set";
-  kitchenConfig["tilt_status_topic"] = "homeassistant/cover/kitchenBlinds/tilt/state";
-  kitchenConfig["tilt_status_template"] = "'{{value_json.tilt_status_template}}'";
-  kitchenConfig["tilt_min"] = 0;
-  kitchenConfig["tilt_max"] = 1;
-  kitchenConfig["tilt_closed_value"] = 0;
-  kitchenConfig["tilt_opened_value"] = 1;
-  kitchenConfig["unique_id"] = "Kitchen Blinds";
   
-  //serializeJsonPretty(kitchenConfig, Serial);
+  const int capacity = JSON_OBJECT_SIZE(29);
+  StaticJsonDocument<capacity> configJson;
+
+  //Basic config values for a cover in Home Assistant
+  configJson["name"] = friendlyName;
+  configJson["~"] = blindsName;
+  configJson["command_topic"] = "~/position/set";
+  configJson["state_topic"] = "~/position/state";
+  //configJson["availability_topic"] = "~/availability";
+  configJson["qos"] = 0;
+  configJson["retain"] = true;
+  configJson["payload_open"] = "U";
+  configJson["payload_close"] = "D";
+  configJson["payload_stop"] = "S";
+  configJson["state_open"] = "open";
+  configJson["state_opening"] = "opening";
+  configJson["state_closed"] = "closed";
+  configJson["state_closing"] = "closing";
+  configJson["payload_available"] = "online";
+  configJson["payload_not_available"] = "offline";
+  configJson["optimistic"] = true;
+  configJson["value_template"] = "'{{value_template}}'";
+  configJson["tilt_command_topic"] = "~/tilt/set";
+  configJson["tilt_status_topic"] = "~/tilt/state";
+  configJson["tilt_status_template"] = "'{{value_json.tilt_status_template}}'";
+  configJson["tilt_min"] = 0;
+  configJson["tilt_max"] = 1;
+  configJson["tilt_closed_value"] = 0;
+  configJson["tilt_opened_value"] = 1;
+  configJson["unique_id"] = friendlyName;
+  
+  //serializeJsonPretty(configJson, Serial);
   //Serial.println("");
-  char message[1000];
+  char message[1200];
 
-  serializeJson(kitchenConfig,message,sizeof(message));  
-  MQTTClient.publish("homeassistant/cover/kitchenBlinds/config", message, true);
-
-
-  StaticJsonDocument<capacity> livingRoomConfig;
-  
-  livingRoomConfig["name"] = "Living Room Blinds";
-  livingRoomConfig["command_topic"] = "homeassistant/cover/livingRoomBlinds/position/set";
-  livingRoomConfig["state_topic"] = "homeassistant/cover/livingRoomBlinds/position/state";
-  //livingRoomConfig["availability_topic"] = "homeassistant/cover/livingRoomBlinds/availability";
-  livingRoomConfig["qos"] = 0;
-  livingRoomConfig["retain"] = true;
-  livingRoomConfig["payload_open"] = "U";
-  livingRoomConfig["payload_close"] = "D";
-  livingRoomConfig["payload_stop"] = "S";
-  livingRoomConfig["state_open"] = "open";
-  livingRoomConfig["state_opening"] = "opening";
-  livingRoomConfig["state_closed"] = "closed";
-  livingRoomConfig["state_closing"] = "closing";
-  livingRoomConfig["payload_available"] = "online";
-  livingRoomConfig["payload_not_available"] = "offline";
-  livingRoomConfig["optimistic"] = true;
-  livingRoomConfig["value_template"] = "'{{value_template}}'";
-  livingRoomConfig["tilt_command_topic"] = "homeassistant/cover/livingRoomBlinds/tilt/set";
-  livingRoomConfig["tilt_status_topic"] = "homeassistant/cover/livingRoomBlinds/tilt/state";
-  livingRoomConfig["tilt_status_template"] = "'{{value_json.tilt_status_template}}'";
-  livingRoomConfig["tilt_min"] = 0;
-  livingRoomConfig["tilt_max"] = 1;
-  livingRoomConfig["tilt_closed_value"] = 0;
-  livingRoomConfig["tilt_opened_value"] = 1;
-  livingRoomConfig["unique_id"] = "Living Room Blinds";
-  
-  //serializeJsonPretty(livingRoomConfig, Serial);
-  //Serial.println("");
-
-  serializeJson(livingRoomConfig,message,sizeof(message));  
-  MQTTClient.publish("homeassistant/cover/livingRoomBlinds/config", message, true);
-  
+  serializeJson(configJson,message,sizeof(message));  
+  MQTTClient.publish(configTopic, message, true);
 }
