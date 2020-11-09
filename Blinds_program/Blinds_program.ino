@@ -20,9 +20,10 @@ const int BITLENGTH = 350; //in microseconds
 const int PREAMBLE_1 = 11; //Length of 1st series, of 1s in preamble
 const int PREAMBLE_2 = 7; //Length of second series, of 0s in preamble
 const int PREAMBLE_3 = 5; //Length of third series, of 1s in preamble
-const float HOLDPAUSE = 390000; //Number of cycles to pause between commands to signal a hold rather than a tap command.
-const float FIRSTHOLDPAUSE = 342000; //First number of cycles to pause between commands to signal a hold rather than a tap command is slightly shorter
-
+const float HOLD_PAUSE = 390000; //Number of cycles to pause between commands to signal a hold rather than a tap command.
+const float FIRST_HOLD_PAUSE = 342000; //First number of cycles to pause between commands to signal a hold rather than a tap command is slightly shorter
+const char KITCHEN_BLINDS_CONFIG_TOPIC[] = "homeassistant/cover/kitchenBlinds/config";
+const char KITCHEN_BLINDS_SET_TOPIC[] = "homeassistant/cover/kitchenBlinds/+/set";
 
 //Setup variables
 char blindsChannel = '2';
@@ -49,6 +50,9 @@ void sendFullCommand(void);
 void sendBaseCommand(void);
 void messageParser(void);
 
+void publishConfig(void);
+
+
 void setup() {
   Serial.begin(115200);
   Serial.println();
@@ -74,6 +78,7 @@ void setup() {
 
   //MQTT Server connect
 
+  MQTTClient.setBufferSize(1000);
   MQTTClient.setServer(mqttServer, mqttPort);
   MQTTClient.setCallback(callback);
 
@@ -96,15 +101,20 @@ void setup() {
   //MQTT Subscriptions
   MQTTClient.publish("esp/test", "Hello from ESP8266");
   MQTTClient.subscribe("esp/test");
-  MQTTClient.subscribe("home-assistant/diningRoomBlinds/");
-  MQTTClient.publish("home-assistant/diningRoomBlinds/state/", "closed");
 
+
+  MQTTClient.subscribe("homeassistant/cover/diningRoomBlinds/+/set");
+
+ 
 
   // Print the IP address
   Serial.print("Use this URL to connect: ");
   Serial.print("http://");
   Serial.print(WiFi.localIP());
   Serial.println("/");
+
+  //Publish the MQTT startup config
+  publishConfig();
 
 }
 
@@ -149,10 +159,10 @@ void sendFullCommand() {
     //This "holding down the button" takes long enough that ESP will think it's in a loop, so we
     //Disable the Software Watchdog
     ESP.wdtDisable();
-    delayMicroseconds(FIRSTHOLDPAUSE);
+    delayMicroseconds(FIRST_HOLD_PAUSE);
     for (int i = 0; i < 3; i++) {
        sendBaseCommand();
-       delayMicroseconds(HOLDPAUSE);
+       delayMicroseconds(HOLD_PAUSE);
     }
     //Reenable Software watchdog
     ESP.wdtEnable(1000);
@@ -696,11 +706,87 @@ void messageParser(byte* payload) {
   Serial.println(command_J);
   Serial.print("Command: ");
   Serial.println(command);
- Serial.print("tapOrHold_J: ");
+  Serial.print("tapOrHold_J: ");
   Serial.println(tapOrHold_J);
   Serial.print("tapOrHold: ");
   Serial.println(tapOrHold);
 
   Serial.println();
 
+}
+
+
+//MQTT Sections
+void publishConfig() {
+  const int capacity = JSON_OBJECT_SIZE(25);
+  StaticJsonDocument<capacity> kitchenConfig;
+  
+  kitchenConfig["name"] = "Kitchen Blinds";
+  kitchenConfig["command_topic"] = "homeassistant/cover/kitchenBlinds/position/set";
+  kitchenConfig["state_topic"] = "homeassistant/cover/kitchenBlinds/position/state";
+  //kitchenConfig["availability_topic"] = "homeassistant/cover/kitchenBlinds/availability";
+  kitchenConfig["qos"] = 0;
+  kitchenConfig["retain"] = true;
+  kitchenConfig["payload_open"] = "U";
+  kitchenConfig["payload_close"] = "D";
+  kitchenConfig["payload_stop"] = "S";
+  kitchenConfig["state_open"] = "open";
+  kitchenConfig["state_opening"] = "opening";
+  kitchenConfig["state_closed"] = "closed";
+  kitchenConfig["state_closing"] = "closing";
+  kitchenConfig["payload_available"] = "online";
+  kitchenConfig["payload_not_available"] = "offline";
+  kitchenConfig["optimistic"] = true;
+  kitchenConfig["value_template"] = "'{{value_template}}'";
+  kitchenConfig["tilt_command_topic"] = "homeassistant/cover/kitchenBlinds/tilt/set";
+  kitchenConfig["tilt_status_topic"] = "homeassistant/cover/kitchenBlinds/tilt/state";
+  kitchenConfig["tilt_status_template"] = "'{{value_json.tilt_status_template}}'";
+  kitchenConfig["tilt_min"] = 0;
+  kitchenConfig["tilt_max"] = 1;
+  kitchenConfig["tilt_closed_value"] = 0;
+  kitchenConfig["tilt_opened_value"] = 1;
+  kitchenConfig["unique_id"] = "Kitchen Blinds";
+  
+  //serializeJsonPretty(kitchenConfig, Serial);
+  //Serial.println("");
+  char message[1000];
+
+  serializeJson(kitchenConfig,message,sizeof(message));  
+  MQTTClient.publish("homeassistant/cover/kitchenBlinds/config", message, true);
+
+
+  StaticJsonDocument<capacity> livingRoomConfig;
+  
+  livingRoomConfig["name"] = "Living Room Blinds";
+  livingRoomConfig["command_topic"] = "homeassistant/cover/livingRoomBlinds/position/set";
+  livingRoomConfig["state_topic"] = "homeassistant/cover/livingRoomBlinds/position/state";
+  //livingRoomConfig["availability_topic"] = "homeassistant/cover/livingRoomBlinds/availability";
+  livingRoomConfig["qos"] = 0;
+  livingRoomConfig["retain"] = true;
+  livingRoomConfig["payload_open"] = "U";
+  livingRoomConfig["payload_close"] = "D";
+  livingRoomConfig["payload_stop"] = "S";
+  livingRoomConfig["state_open"] = "open";
+  livingRoomConfig["state_opening"] = "opening";
+  livingRoomConfig["state_closed"] = "closed";
+  livingRoomConfig["state_closing"] = "closing";
+  livingRoomConfig["payload_available"] = "online";
+  livingRoomConfig["payload_not_available"] = "offline";
+  livingRoomConfig["optimistic"] = true;
+  livingRoomConfig["value_template"] = "'{{value_template}}'";
+  livingRoomConfig["tilt_command_topic"] = "homeassistant/cover/livingRoomBlinds/tilt/set";
+  livingRoomConfig["tilt_status_topic"] = "homeassistant/cover/livingRoomBlinds/tilt/state";
+  livingRoomConfig["tilt_status_template"] = "'{{value_json.tilt_status_template}}'";
+  livingRoomConfig["tilt_min"] = 0;
+  livingRoomConfig["tilt_max"] = 1;
+  livingRoomConfig["tilt_closed_value"] = 0;
+  livingRoomConfig["tilt_opened_value"] = 1;
+  livingRoomConfig["unique_id"] = "Living Room Blinds";
+  
+  //serializeJsonPretty(livingRoomConfig, Serial);
+  //Serial.println("");
+
+  serializeJson(livingRoomConfig,message,sizeof(message));  
+  MQTTClient.publish("homeassistant/cover/livingRoomBlinds/config", message, true);
+  
 }
