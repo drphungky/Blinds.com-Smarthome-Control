@@ -21,7 +21,7 @@ const int PREAMBLE_1 = 11; //Length of 1st series, of 1s in preamble
 const int PREAMBLE_2 = 7; //Length of second series, of 0s in preamble
 const int PREAMBLE_3 = 5; //Length of third series, of 1s in preamble
 const float HOLD_PAUSE = 390000; //Number of cycles to pause between commands to signal a hold rather than a tap command.
-const float FIRST_HOLD_PAUSE = 342000; //First number of cycles to pause between commands to signal a hold rather than a tap command is slightly shorter
+const float FIRST_HOLD_PAUSE = 340000; //First number of cycles to pause between commands to signal a hold rather than a tap command is slightly shorter
 const char KITCHEN_BLINDS_CONFIG_TOPIC[] = "homeassistant/cover/kitchenBlinds/config";
 const char KITCHEN_BLINDS_SET_TOPIC[] = "homeassistant/cover/kitchenBlinds/+/set";
 
@@ -41,7 +41,8 @@ void byteFinal(void);
 void sendChannel(void);
 void sendRemoteID(void);
 void channel2_up(void);
-void sendMoveOrConfirm(void);
+void sendFirstMoveOrConfirm(void);
+void setStopCheck(void);
 void sendStopCheck(void);
 void sendChannelCheck(void);
 void sendCommandCheck(void);
@@ -103,7 +104,7 @@ void setup() {
   MQTTClient.subscribe("esp/test");
 
 
-  MQTTClient.subscribe("homeassistant/cover/diningRoomBlinds/+/set");
+  MQTTClient.subscribe("homeassistant/cover/#");
 
  
 
@@ -114,12 +115,12 @@ void setup() {
   Serial.println("/");
 
   //Publish the MQTT startup config
-  publishBlindsConfig("homeassistant/cover/kitchenBlinds","Kitchen Blinds");
-  publishBlindsConfig("homeassistant/cover/livingRoomBlinds","Living Room Blinds");
+  publishBlindsConfig("homeassistant/cover/kitchenBlinds10","Kitchen Blinds10");
+ /* publishBlindsConfig("homeassistant/cover/livingRoomBlinds","Living Room Blinds");
   publishBlindsConfig("homeassistant/cover/masterBedroomBlinds","Master Bedroom Blinds");
   publishBlindsConfig("homeassistant/cover/kidsRoomBlinds","Kids Room Blinds");
   publishBlindsConfig("homeassistant/cover/diningRoomBlinds","Dining Room Blinds");
-  publishBlindsConfig("homeassistant/cover/guestRoomBlinds","Guest Room Blinds");
+  publishBlindsConfig("homeassistant/cover/guestRoomBlinds","Guest Room Blinds");*/
 }
 
 
@@ -135,11 +136,11 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
   Serial.println();
   Serial.println("-----------------------");
-  //sendFullCommand();
 
-  messageParser(payload);
-  sendFullCommand();
-  
+  if (strcmp(topic,"homeassistant/cover/kitchenBlinds/position/set")==0){
+    messageParser(payload);
+    sendFullCommand();
+  }
 }
 
 
@@ -153,6 +154,7 @@ void loop() {
 void sendFullCommand() {
   /*Necessary to run setStopCheck first so it can be used in sendChannelCheck. I kept all the sends together in case clock speed
     became an issue. Not sure how finicky Arduino and RF transmitters are.*/
+  setStopCheck();
 
   //Send actual commands:  
   sendBaseCommand();
@@ -183,7 +185,7 @@ void sendBaseCommand() {
     sendChannel();
     sendCommand();
     sendStopCheck();
-    sendMoveOrConfirm();
+    sendFirstMoveOrConfirm();
     sendChannelCheck();
     sendCommandCheck();
     sendMessageEnd();
@@ -312,12 +314,14 @@ void sendCommand() {
 
 //Send the stopcheck portion of a button push (some kind of checkbytes)
 void setStopCheck() {
-  if (command == 'D' || command == 'U') {
+  if ((command == 'D') || (command == 'U')) {
     stopCheck = '0';
   }
   else {
     stopCheck = '1';
   }
+    Serial.print("stopCheck is: ");
+    Serial.println(stopCheck);
 }
 
 
@@ -337,9 +341,14 @@ void sendStopCheck() {
 
 
 
-//Send the moveorconfirm portion of a button push (some kind of checkbytes)
-void sendMoveOrConfirm() {
-  if (command == 'D' || command == 'U' || command == 'C') {
+//Send the firstmoveorconfirm portion of a button push (some kind of checkbytes)
+void sendFirstMoveOrConfirm() {
+  if (
+      ( (command == 'D') && (tapOrHold == 'T') )
+      || ( (command == 'U') && (tapOrHold == 'T') )
+      || (command == 'C')
+      )
+  {
     byte1();
   }
   else {
@@ -367,6 +376,7 @@ void sendChannelCheck() {
           byte1();
           byte1();
           byte0();
+          Serial.println("correct stop check");
           break;
         case '3': // blindsChannel 3 = 1010 on stopcheck
           byte1();
@@ -408,6 +418,7 @@ void sendChannelCheck() {
           byte1();
           byte1();
           byte0();
+          Serial.println("incorrect stop check");
           break;
         case '3': // blindsChannel 3 = 0110 on nostopcheck
           byte0();
@@ -443,22 +454,44 @@ void sendChannelCheck() {
 
 void sendCommandCheck() {
   switch (blindsChannel) {
-    case 'A':
-      switch (command) {
-        case 'U': //Up = 1010
-          byte0();
-          byte0();
-          byte1();
-          byte1();
+    case 'A': //All channels
+      switch (tapOrHold){
+        case 'T': //All tap
+          switch (command) {
+            case 'U': //All Tap Up = 1010
+              byte1();
+              byte0();
+              byte1();
+              byte0();
+              break;
+    
+            case 'D': //All Tap Down = 0000
+              byte0();
+              byte0();
+              byte0();
+              byte0();
+              break;
+            }
+            break;
+        case 'H': //All hold
+          switch (command) {
+            case 'U': //All Hold Up = 0110
+              byte0();
+              byte1();
+              byte1();
+              byte0();
+              break;
+    
+            case 'D': //All Hold Down = 1000
+              byte1();
+              byte0();
+              byte0();
+              byte0();
+              break;
+            }
           break;
-
-        case 'D': //Down = 0000
-          byte0();
-          byte0();
-          byte0();
-          byte0();
-          break;
-
+      }       
+      switch(command) {
         case 'S': //Stop = 1011
           byte1();
           byte0();
@@ -489,39 +522,61 @@ void sendCommandCheck() {
       }
       break;
 
-    default:
-      switch (command) {
-        case 'U': //Up = 0110
-          byte0();
-          byte1();
-          byte1();
-          byte0();
-          break;
-
-        case 'D': //Down = 1000
-          byte1();
-          byte0();
-          byte0();
-          byte0();
-          break;
-
+    default: //Any single channel
+      switch (tapOrHold){
+        case 'T': //Single channel tap
+          switch (command) {
+            case 'U': //single channel tap up = 0110
+              byte0();
+              byte1();
+              byte1();
+              byte0();
+              break;
+    
+            case 'D': //Single Channel tap Down = 1000
+              byte1();
+              byte0();
+              byte0();
+              byte0();
+              break;
+            }
+            break;
+        case 'H': //single channel hold
+          switch (command) {
+            case 'U': //single channel hold up = 1110
+              byte1();
+              byte1();
+              byte1();
+              byte0();
+              break;
+    
+            case 'D': //single channel hold down = 0100
+              byte0();
+              byte1();
+              byte0();
+              byte0();
+              break;
+            }
+            break;
+          }       
+      switch(command) {
         case 'S': //Stop = 0111
-          byte1();
           byte0();
           byte1();
-          byte0();
+          byte1();
+          byte1();
           break;
 
         case 'C': //Confirm = 0111
           byte0();
-          byte0();
           byte1();
-          byte0();
+          byte1();
+          byte1();
           break;
 
         case 'L': //Limit = 1000
-          byte0();
           byte1();
+          byte0();
           byte0();
           byte0();
           break;
@@ -669,8 +724,8 @@ void messageParser(byte* payload) {
   Serial.println();
   Serial.println("Parsing start: ");
 
-  char debugJSON[] = " {\"SensorType\": \"Temperature\", \"Value\": 11}"; //Original message
-  Serial.println(debugJSON);
+  //char debugJSON[] = " {\"SensorType\": \"Temperature\", \"Value\": 11}"; //Original message
+  //Serial.println(debugJSON);
 
   StaticJsonDocument<300> JSONDocument;                         //Memory pool
   DeserializationError err = deserializeJson(JSONDocument, payload); //Parse message
@@ -687,7 +742,7 @@ void messageParser(byte* payload) {
   const char* remoteID_J = JSONDocument["remoteID"]; //Get remoteID
   const char* channel_J = JSONDocument["channel"]; //Get blindsChannel
   const char* command_J  = JSONDocument["command"]; //Get command
-   const char* tapOrHold_J  = JSONDocument["tapOrHold"]; //Get tapOrHold
+  const char* tapOrHold_J  = JSONDocument["tapOrHold"]; //Get tapOrHold
 
   std::strcpy(remoteID,remoteID_J);
   
@@ -714,7 +769,6 @@ void messageParser(byte* payload) {
   Serial.println(tapOrHold_J);
   Serial.print("tapOrHold: ");
   Serial.println(tapOrHold);
-
   Serial.println();
 
 }
@@ -725,21 +779,27 @@ void publishBlindsConfig(const char* blindsName, const char* friendlyName) {
 
   //Set up the command topic root address to save space (not sure if it actually saves space, but means I can avoid string concatenation, so yay.
   char configTopic[100]{};
-
+ 
   std::strcat(configTopic,blindsName);
   Serial.println(configTopic);
   std::strcat(configTopic,"/config");
   Serial.println(configTopic);
-  
-  
-  const int capacity = JSON_OBJECT_SIZE(29);
+
+ 
+  const int capacity = JSON_OBJECT_SIZE(31);
   StaticJsonDocument<capacity> configJson;
 
   //Basic config values for a cover in Home Assistant
-  configJson["name"] = friendlyName;
-  configJson["~"] = blindsName;
+  configJson["name"] = "Kitchen_Blinds10";
+  configJson["~"] = blindsName; //HA allows a tilde to define the root topic path so it doesn't need to be rebroadcast for each topic. Nice.
   configJson["command_topic"] = "~/position/set";
   configJson["state_topic"] = "~/position/state";
+  JsonObject device = configJson.createNestedObject("device");
+  device["name"] = "Kitchen Blinds Device10";
+  device["identifiers"] = "Kitchen_Blinds_Identifier10";
+  device["via_device"] = "esp8266";
+  
+  configJson["device_class"] = "blind";
   //configJson["availability_topic"] = "~/availability";
   configJson["qos"] = 0;
   configJson["retain"] = true;
@@ -761,7 +821,7 @@ void publishBlindsConfig(const char* blindsName, const char* friendlyName) {
   configJson["tilt_max"] = 1;
   configJson["tilt_closed_value"] = 0;
   configJson["tilt_opened_value"] = 1;
-  configJson["unique_id"] = friendlyName;
+  configJson["unique_id"] = "Kitchen_Blinds_Unique_ID10";
   
   //serializeJsonPretty(configJson, Serial);
   //Serial.println("");
