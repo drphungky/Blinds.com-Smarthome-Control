@@ -115,12 +115,12 @@ void setup() {
   Serial.println("/");
 
   //Publish the MQTT startup config
-  publishBlindsConfig("homeassistant/cover/kitchenBlinds10","Kitchen Blinds10");
- /* publishBlindsConfig("homeassistant/cover/livingRoomBlinds","Living Room Blinds");
+  publishBlindsConfig("homeassistant/cover/kitchenBlinds","Kitchen Blinds");
+  publishBlindsConfig("homeassistant/cover/livingRoomBlinds","Living Room Blinds");
   publishBlindsConfig("homeassistant/cover/masterBedroomBlinds","Master Bedroom Blinds");
   publishBlindsConfig("homeassistant/cover/kidsRoomBlinds","Kids Room Blinds");
   publishBlindsConfig("homeassistant/cover/diningRoomBlinds","Dining Room Blinds");
-  publishBlindsConfig("homeassistant/cover/guestRoomBlinds","Guest Room Blinds");*/
+  publishBlindsConfig("homeassistant/cover/guestRoomBlinds","Guest Room Blinds");
 }
 
 
@@ -786,18 +786,20 @@ void publishBlindsConfig(const char* blindsName, const char* friendlyName) {
   Serial.println(configTopic);
 
  
-  const int capacity = JSON_OBJECT_SIZE(31);
+  const int capacity = JSON_OBJECT_SIZE(33);
   StaticJsonDocument<capacity> configJson;
 
   //Basic config values for a cover in Home Assistant
-  configJson["name"] = "Kitchen_Blinds10";
+  configJson["name"] = friendlyName;
   configJson["~"] = blindsName; //HA allows a tilde to define the root topic path so it doesn't need to be rebroadcast for each topic. Nice.
   configJson["command_topic"] = "~/position/set";
   configJson["state_topic"] = "~/position/state";
   JsonObject device = configJson.createNestedObject("device");
-  device["name"] = "Kitchen Blinds Device10";
-  device["identifiers"] = "Kitchen_Blinds_Identifier10";
+  device["name"] = friendlyName;
+  device["identifiers"] = friendlyName;
   device["via_device"] = "esp8266";
+  device["manufacturer"] = "Blinds.com (resold Comfortex with Bofu Motor)";
+  device["model"] = "Room Darkening Sheer Shades";
   
   configJson["device_class"] = "blind";
   //configJson["availability_topic"] = "~/availability";
@@ -821,7 +823,7 @@ void publishBlindsConfig(const char* blindsName, const char* friendlyName) {
   configJson["tilt_max"] = 1;
   configJson["tilt_closed_value"] = 0;
   configJson["tilt_opened_value"] = 1;
-  configJson["unique_id"] = "Kitchen_Blinds_Unique_ID10";
+  configJson["unique_id"] = friendlyName;
   
   //serializeJsonPretty(configJson, Serial);
   //Serial.println("");
