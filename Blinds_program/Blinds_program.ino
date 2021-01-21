@@ -30,7 +30,7 @@ char blindsChannel = '2';
 char command = 'U';
 char remoteID[] = "1011011011011010";
 char stopCheck = '0';
-char tapOrHold='T';
+char tapOrHold='H';
 
 //Setup functions
 void sendPreamble(void);
@@ -49,7 +49,7 @@ void sendCommandCheck(void);
 void sendMessageEnd(void);
 void sendFullCommand(void);
 void sendBaseCommand(void);
-void messageParser(void);
+void adminMessageParser(void);
 
 void publishBlindsConfig(const char* blindsName,const char* friendlyName);
 
@@ -115,12 +115,18 @@ void setup() {
   Serial.println("/");
 
   //Publish the MQTT startup config
-  publishBlindsConfig("homeassistant/cover/kitchenBlinds","Kitchen Blinds");
+
+  //Channel 1 
   publishBlindsConfig("homeassistant/cover/livingRoomBlinds","Living Room Blinds");
-  publishBlindsConfig("homeassistant/cover/masterBedroomBlinds","Master Bedroom Blinds");
-  publishBlindsConfig("homeassistant/cover/kidsRoomBlinds","Kids Room Blinds");
+  //Channel 2 
   publishBlindsConfig("homeassistant/cover/diningRoomBlinds","Dining Room Blinds");
+  publishBlindsConfig("homeassistant/cover/kitchenBlinds","Kitchen Blinds");
+  //Channel 3 
   publishBlindsConfig("homeassistant/cover/guestRoomBlinds","Guest Room Blinds");
+  //Channel 4 
+  publishBlindsConfig("homeassistant/cover/kidsRoomBlinds","Kids Room Blinds");
+  //Channel 5 
+  publishBlindsConfig("homeassistant/cover/masterBedroomBlinds","Master Bedroom Blinds");
 }
 
 
@@ -137,9 +143,70 @@ void callback(char* topic, byte* payload, unsigned int length) {
   Serial.println();
   Serial.println("-----------------------");
 
-  if (strcmp(topic,"homeassistant/cover/kitchenBlinds/position/set")==0){
-    messageParser(payload);
+  if (strcmp(topic,"homeassistant/cover/admin")==0){
+    adminMessageParser(payload);
     sendFullCommand();
+  }
+  
+  else if (strcmp(topic,"homeassistant/cover/livingRoomBlinds/position/set")==0){
+    blindsChannel='1';
+    command=payload[0];
+    if (command=='S'){
+      tapOrHold='T';
+      sendFullCommand();        
+    }
+    if (command=='U' || command=='D'){
+      tapOrHold='H';
+      sendFullCommand();        
+    }
+  }
+  else if ((strcmp(topic,"homeassistant/cover/kitchenBlinds/position/set")==0) || (strcmp(topic,"homeassistant/cover/diningRoomBlinds")==0)){
+    blindsChannel='2';
+    command=payload[0];
+    if (command=='S'){
+      tapOrHold='T';
+      sendFullCommand();        
+    }
+    if (command=='U' || command=='D'){
+      tapOrHold='H';
+      sendFullCommand();        
+    }
+  }
+  else if (strcmp(topic,"homeassistant/cover/guestRoomBlinds/position/set")==0){
+    blindsChannel='3';
+    command=payload[0];
+    if (command=='S'){
+      tapOrHold='T';
+      sendFullCommand();        
+    }
+    if (command=='U' || command=='D'){
+      tapOrHold='H';
+      sendFullCommand();        
+    }
+  }
+  else if (strcmp(topic,"homeassistant/cover/kidsRoomBlinds/position/set")==0){
+    blindsChannel='4';
+    command=payload[0];
+    if (command=='S'){
+      tapOrHold='T';
+      sendFullCommand();        
+    }
+    if (command=='U' || command=='D'){
+      tapOrHold='H';
+      sendFullCommand();        
+    }
+  }
+  else if (strcmp(topic,"homeassistant/cover/masterBedroomBlinds/position/set")==0){
+    blindsChannel='5';
+    command=payload[0];
+    if (command=='S'){
+      tapOrHold='T';
+      sendFullCommand();        
+    }
+    if (command=='U' || command=='D'){
+      tapOrHold='H';
+      sendFullCommand();        
+    }
   }
 }
 
@@ -720,7 +787,7 @@ void byteFinal(void) {
   digitalWrite(GPIOPIN, LOW);
 }
 
-void messageParser(byte* payload) {
+void adminMessageParser(byte* payload) {
   Serial.println();
   Serial.println("Parsing start: ");
 
