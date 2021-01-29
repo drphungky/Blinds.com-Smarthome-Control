@@ -116,17 +116,28 @@ void setup() {
 
   //Publish the MQTT startup config
 
-  //Channel 1 
-  publishBlindsConfig("homeassistant/cover/livingRoomBlinds","Living Room Blinds");
-  //Channel 2 
-  publishBlindsConfig("homeassistant/cover/diningRoomBlinds","Dining Room Blinds");
-  publishBlindsConfig("homeassistant/cover/kitchenBlinds","Kitchen Blinds");
-  //Channel 3 
-  publishBlindsConfig("homeassistant/cover/guestRoomBlinds","Guest Room Blinds");
-  //Channel 4 
-  publishBlindsConfig("homeassistant/cover/kidsRoomBlinds","Kids Room Blinds");
-  //Channel 5 
-  publishBlindsConfig("homeassistant/cover/masterBedroomBlinds","Master Bedroom Blinds");
+  //Remote1
+    //Channel 1 
+      //Unassigned
+    //Channel 2 
+      //Unassigned
+    //Channel 3 
+      publishBlindsConfig("homeassistant/cover/guestRoomBlinds","Guest Room Blinds");
+    //Channel 4 
+      publishBlindsConfig("homeassistant/cover/kidsRoomBlinds","Kids Room Blinds");
+    //Channel 5 
+      publishBlindsConfig("homeassistant/cover/masterBedroomBlinds","Master Bedroom Blinds");
+  //Remote2
+    //Channel 1 
+      publishBlindsConfig("homeassistant/cover/livingRoomBlinds","Living Room Blinds");
+    //Channel 2 
+      publishBlindsConfig("homeassistant/cover/eastKitchenBlinds","East Kitchen Blinds");
+    //Channel 3 
+      publishBlindsConfig("homeassistant/cover/kitchenSinkBlinds","Kitchen Sink Blinds");
+    //Channel 4 
+      publishBlindsConfig("homeassistant/cover/diningRoomBlinds","Dining Room Blinds");
+    //Channel 5 
+      publishBlindsConfig("homeassistant/cover/guestRoomBlinds","Guest Room Blinds");
 }
 
 
@@ -147,32 +158,11 @@ void callback(char* topic, byte* payload, unsigned int length) {
     adminMessageParser(payload);
     sendFullCommand();
   }
-  
-  else if (strcmp(topic,"homeassistant/cover/livingRoomBlinds/position/set")==0){
-    blindsChannel='1';
-    command=payload[0];
-    if (command=='S'){
-      tapOrHold='T';
-      sendFullCommand();        
-    }
-    if (command=='U' || command=='D'){
-      tapOrHold='H';
-      sendFullCommand();        
-    }
-  }
-  else if ((strcmp(topic,"homeassistant/cover/kitchenBlinds/position/set")==0) || (strcmp(topic,"homeassistant/cover/diningRoomBlinds")==0)){
-    blindsChannel='2';
-    command=payload[0];
-    if (command=='S'){
-      tapOrHold='T';
-      sendFullCommand();        
-    }
-    if (command=='U' || command=='D'){
-      tapOrHold='H';
-      sendFullCommand();        
-    }
-  }
+
+//Remote1
+
   else if (strcmp(topic,"homeassistant/cover/guestRoomBlinds/position/set")==0){
+    std::strcpy(remoteID,"1011011011011010");
     blindsChannel='3';
     command=payload[0];
     if (command=='S'){
@@ -184,7 +174,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
       sendFullCommand();        
     }
   }
-  else if (strcmp(topic,"homeassistant/cover/kidsRoomBlinds/position/set")==0){
+  
+    else if (strcmp(topic,"homeassistant/cover/kidsRoomBlinds/position/set")==0){
+    std::strcpy(remoteID,"1011011011011010");
     blindsChannel='4';
     command=payload[0];
     if (command=='S'){
@@ -196,7 +188,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
       sendFullCommand();        
     }
   }
+  
   else if (strcmp(topic,"homeassistant/cover/masterBedroomBlinds/position/set")==0){
+    std::strcpy(remoteID,"1011011011011010");
     blindsChannel='5';
     command=payload[0];
     if (command=='S'){
@@ -205,6 +199,78 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
     if (command=='U' || command=='D'){
       tapOrHold='H';
+      sendFullCommand();        
+    }
+  }
+
+//Remote2
+//This remote only issues hold (i.e. open or close all the way) commands on a tap somehow, so all commands are set to taps below to avoid the hold checksum exception processing.
+ 
+  else if (strcmp(topic,"homeassistant/cover/livingRoomBlinds/position/set")==0){
+    std::strcpy(remoteID,"1010110110001010");
+    blindsChannel='1';
+    command=payload[0];
+    if (command=='S'){
+      tapOrHold='T';
+      sendFullCommand();        
+    }
+    if (command=='U' || command=='D'){
+      tapOrHold='T';
+      sendFullCommand();        
+    }
+  }
+  
+  else if (strcmp(topic,"homeassistant/cover/eastKitchenBlinds/position/set")==0){
+    std::strcpy(remoteID,"1010110110001010");
+    blindsChannel='2';
+    command=payload[0];
+    if (command=='S'){
+      tapOrHold='T';
+      sendFullCommand();        
+    }
+    if (command=='U' || command=='D'){
+      tapOrHold='T';
+      sendFullCommand();        
+    }
+  }
+
+  else if (strcmp(topic,"homeassistant/cover/kitchenSinkBlinds/position/set")==0){
+    std::strcpy(remoteID,"1010110110001010");
+    blindsChannel='3';
+    command=payload[0];
+    if (command=='S'){
+      tapOrHold='T';
+      sendFullCommand();        
+    }
+    if (command=='U' || command=='D'){
+      tapOrHold='T';
+      sendFullCommand();        
+    }
+  }
+  else if (strcmp(topic,"homeassistant/cover/diningRoomBlinds/position/set")==0){
+    std::strcpy(remoteID,"1010110110001010");
+    blindsChannel='4';
+    command=payload[0];
+    if (command=='S'){
+      tapOrHold='T';
+      sendFullCommand();        
+    }
+    if (command=='U' || command=='D'){
+      tapOrHold='T';
+      sendFullCommand();        
+    }
+  }
+
+  else if (strcmp(topic,"homeassistant/cover/guestRoomBlinds/position/set")==0){
+    std::strcpy(remoteID,"1010110110001010");
+    blindsChannel='5';
+    command=payload[0];
+    if (command=='S'){
+      tapOrHold='T';
+      sendFullCommand();        
+    }
+    if (command=='U' || command=='D'){
+      tapOrHold='T';
       sendFullCommand();        
     }
   }
@@ -248,13 +314,37 @@ void sendFullCommand() {
 void sendBaseCommand() {
   for (int i = 0; i < 8; i++) {
     sendPreamble();
+
+//    Serial.println();
+//    Serial.print("RemoteID: ");
     sendRemoteID();
+    
+//    Serial.println();
+//    Serial.print("Channel: ");
     sendChannel();
+
+//    Serial.println();
+//    Serial.print("Command: ");
     sendCommand();
+    
+//    Serial.println();
+//    Serial.print("StopCheck: ");
     sendStopCheck();
+    
+//    Serial.println();
+//    Serial.print("FirstMoveOrConfirm: ");
     sendFirstMoveOrConfirm();
+    
+//    Serial.println();
+//    Serial.print("ChannelCheck: ");
     sendChannelCheck();
+    
+//    Serial.println();
+//    Serial.print("CommandCheck: ");
     sendCommandCheck();
+
+//    Serial.println();
+//    Serial.print("MessageEnd: ");
     sendMessageEnd();
   }
 }
@@ -376,8 +466,6 @@ void sendCommand() {
 
 }
 
-/*Note that the result of setStopCheck isn't used in sendStopCheck even though I could have, because if I ever figure
-   out how the checksum is actually calculated, that function will be superfluous. */
 
 //Send the stopcheck portion of a button push (some kind of checkbytes)
 void setStopCheck() {
@@ -387,6 +475,9 @@ void setStopCheck() {
   else {
     stopCheck = '1';
   }
+  if ((strcmp(remoteID,"1010110110001010")==0)) {
+    stopCheck = '1';
+  }  
     Serial.print("stopCheck is: ");
     Serial.println(stopCheck);
 }
@@ -394,7 +485,7 @@ void setStopCheck() {
 
 //Send the stopcheck portion of a button push (some kind of checkbytes)
 void sendStopCheck() {
-  if (command == 'D' || command == 'U') {
+  if (stopCheck == '0') {
     byte0();
   }
   else {
@@ -411,13 +502,17 @@ void sendStopCheck() {
 //Send the firstmoveorconfirm portion of a button push (some kind of checkbytes)
 void sendFirstMoveOrConfirm() {
   if (
-      ( (command == 'D') && (tapOrHold == 'T') )
-      || ( (command == 'U') && (tapOrHold == 'T') )
-      || (command == 'C')
+      (strcmp(remoteID,"1011011011011010")==0) &&
+      (
+        ( (command == 'D') && (tapOrHold == 'T') )
+        || ( (command == 'U') && (tapOrHold == 'T') )
+        || (command == 'C')
+        )
       )
   {
     byte1();
   }
+  //always 0 for the other remote or holds
   else {
     byte0();
   }
@@ -429,233 +524,349 @@ void sendFirstMoveOrConfirm() {
 /*Send first 4 of 8 digit checksum that I can't really figure out. Best I can do is this hardcoded list.*/
 
 void sendChannelCheck() {
-  switch (stopCheck) {
-    case '1':
-      switch (blindsChannel) {
-        case '1': // blindsChannel 1 = 1110 on stopcheck
-          byte1();
-          byte1();
-          byte1();
-          byte0();
-          break;
-        case '2': // blindsChannel 2 = 0110 on stopcheck
-          byte0();
-          byte1();
-          byte1();
-          byte0();
-          Serial.println("correct stop check");
-          break;
-        case '3': // blindsChannel 3 = 1010 on stopcheck
-          byte1();
-          byte0();
-          byte1();
-          byte0();
-          break;
-        case '4': // blindsChannel 4 = 0010 on stopcheck
-          byte0();
-          byte0();
-          byte1();
-          byte0();
-          break;
-        case '5': // blindsChannel 5 = 1100 on stopcheck
-          byte1();
-          byte1();
-          byte0();
-          byte0();
-          break;
-        case 'A': // blindsChannel All = 1001 on stopcheck
-          byte1();
-          byte0();
-          byte0();
-          byte1();
-          break;
-
-      }
-      break;
-    case '0':
-      switch (blindsChannel) {
-        case '1': // blindsChannel 1 = 0001 on nostopcheck
-          byte0();
-          byte0();
-          byte0();
-          byte1();
-          break;
-        case '2': // blindsChannel 2 = 1110 on nostopcheck
-          byte1();
-          byte1();
-          byte1();
-          byte0();
-          Serial.println("incorrect stop check");
-          break;
-        case '3': // blindsChannel 3 = 0110 on nostopcheck
-          byte0();
-          byte1();
-          byte1();
-          byte0();
-          break;
-        case '4': // blindsChannel 4 = 1010 on nostopcheck
-          byte1();
-          byte0();
-          byte1();
-          byte0();
-          break;
-        case '5': // blindsChannel 5 = 0010 on nostopcheck
-          byte0();
-          byte0();
-          byte1();
-          byte0();
-          break;
-        case 'A': // blindsChannel All = 0101 on nostopcheck
-          byte0();
-          byte1();
-          byte0();
-          byte1();
-          break;
-      }
-      break;
+  if ((strcmp(remoteID,"1011011011011010")==0)){
+    switch (stopCheck) {
+      case '1':
+        switch (blindsChannel) {
+          case '1': // blindsChannel 1 = 1110 on stopcheck
+            byte1();
+            byte1();
+            byte1();
+            byte0();
+            break;
+          case '2': // blindsChannel 2 = 0110 on stopcheck
+            byte0();
+            byte1();
+            byte1();
+            byte0();
+            Serial.println("correct stop check");
+            break;
+          case '3': // blindsChannel 3 = 1010 on stopcheck
+            byte1();
+            byte0();
+            byte1();
+            byte0();
+            break;
+          case '4': // blindsChannel 4 = 0010 on stopcheck
+            byte0();
+            byte0();
+            byte1();
+            byte0();
+            break;
+          case '5': // blindsChannel 5 = 1100 on stopcheck
+            byte1();
+            byte1();
+            byte0();
+            byte0();
+            break;
+          case 'A': // blindsChannel All = 1001 on stopcheck
+            byte1();
+            byte0();
+            byte0();
+            byte1();
+            break;
+  
+        }
+        break;
+      case '0':
+        switch (blindsChannel) {
+          case '1': // blindsChannel 1 = 0001 on nostopcheck
+            byte0();
+            byte0();
+            byte0();
+            byte1();
+            break;
+          case '2': // blindsChannel 2 = 1110 on nostopcheck
+            byte1();
+            byte1();
+            byte1();
+            byte0();
+            Serial.println("incorrect stop check");
+            break;
+          case '3': // blindsChannel 3 = 0110 on nostopcheck
+            byte0();
+            byte1();
+            byte1();
+            byte0();
+            break;
+          case '4': // blindsChannel 4 = 1010 on nostopcheck
+            byte1();
+            byte0();
+            byte1();
+            byte0();
+            break;
+          case '5': // blindsChannel 5 = 0010 on nostopcheck
+            byte0();
+            byte0();
+            byte1();
+            byte0();
+            break;
+          case 'A': // blindsChannel All = 0101 on nostopcheck
+            byte0();
+            byte1();
+            byte0();
+            byte1();
+            break;
+        }
+        break;
+    }
+  }
+  else if ((strcmp(remoteID,"1010110110001010")==0)){
+    switch (blindsChannel) {
+      case '1': // blindsChannel 1 = 1001
+        byte1();
+        byte0();
+        byte0();
+        byte1();
+        break;
+      case '2': // blindsChannel 2 = 0001
+        byte0();
+        byte0();
+        byte0();
+        byte1();
+        break;
+      case '3': // blindsChannel 3 = 1110
+        byte1();
+        byte1();
+        byte1();
+        byte0();
+        break;
+      case '4': // blindsChannel 4 = 0110
+        byte0();
+        byte1();
+        byte1();
+        byte0();
+        break;
+      case '5': // blindsChannel 5 = 1010
+        byte1();
+        byte0();
+        byte1();
+        byte0();
+        break;
+      case 'A': // blindsChannel All = 1101
+        byte1();
+        byte1();
+        byte0();
+        byte1();
+        break;
+    }
   }
 }
-
 
 /*Send second 4 of 8 digit checksum that I can't really figure out. Best I can do is this hardcoded list.*/
 
 void sendCommandCheck() {
-  switch (blindsChannel) {
-    case 'A': //All channels
-      switch (tapOrHold){
-        case 'T': //All tap
-          switch (command) {
-            case 'U': //All Tap Up = 1010
-              byte1();
-              byte0();
-              byte1();
-              byte0();
+  if ((strcmp(remoteID,"1011011011011010")==0)){
+    switch (blindsChannel) {
+      case 'A': //All channels
+        switch (tapOrHold){
+          case 'T': //All tap
+            switch (command) {
+              case 'U': //All Tap Up = 1010
+                byte1();
+                byte0();
+                byte1();
+                byte0();
+                break;
+      
+              case 'D': //All Tap Down = 0000
+                byte0();
+                byte0();
+                byte0();
+                byte0();
+                break;
+              }
               break;
-    
-            case 'D': //All Tap Down = 0000
-              byte0();
-              byte0();
-              byte0();
-              byte0();
-              break;
-            }
+          case 'H': //All hold
+            switch (command) {
+              case 'U': //All Hold Up = 0110
+                byte0();
+                byte1();
+                byte1();
+                byte0();
+                break;
+      
+              case 'D': //All Hold Down = 1000
+                byte1();
+                byte0();
+                byte0();
+                byte0();
+                break;
+              }
             break;
-        case 'H': //All hold
-          switch (command) {
-            case 'U': //All Hold Up = 0110
-              byte0();
-              byte1();
-              byte1();
-              byte0();
-              break;
-    
-            case 'D': //All Hold Down = 1000
-              byte1();
-              byte0();
-              byte0();
-              byte0();
-              break;
-            }
-          break;
-      }       
-      switch(command) {
-        case 'S': //Stop = 1011
-          byte1();
-          byte0();
-          byte1();
-          byte1();
-          break;
-
-        case 'C': //Confirm = 1011
-          byte1();
-          byte0();
-          byte1();
-          byte1();
-          break;
-
-        case 'L': //Limit = 0000
-          byte0();
-          byte0();
-          byte0();
-          byte0();
-          break;
-
-        case 'F': //Set Favorite (i.e. press and hold limit then immediately press up) = 1001
-          byte1();
-          byte0();
-          byte0();
-          byte1();
-          break;
-      }
-      break;
-
-    default: //Any single channel
-      switch (tapOrHold){
-        case 'T': //Single channel tap
-          switch (command) {
-            case 'U': //single channel tap up = 0110
-              byte0();
-              byte1();
-              byte1();
-              byte0();
-              break;
-    
-            case 'D': //Single Channel tap Down = 1000
-              byte1();
-              byte0();
-              byte0();
-              byte0();
-              break;
-            }
+        }       
+        switch(command) {
+          case 'S': //Stop = 1011
+            byte1();
+            byte0();
+            byte1();
+            byte1();
             break;
-        case 'H': //single channel hold
-          switch (command) {
-            case 'U': //single channel hold up = 1110
-              byte1();
-              byte1();
-              byte1();
-              byte0();
-              break;
-    
-            case 'D': //single channel hold down = 0100
-              byte0();
-              byte1();
-              byte0();
-              byte0();
-              break;
-            }
+  
+          case 'C': //Confirm = 1011
+            byte1();
+            byte0();
+            byte1();
+            byte1();
             break;
-          }       
-      switch(command) {
-        case 'S': //Stop = 0111
-          byte0();
-          byte1();
-          byte1();
-          byte1();
-          break;
-
-        case 'C': //Confirm = 0111
-          byte0();
-          byte1();
-          byte1();
-          byte1();
-          break;
-
-        case 'L': //Limit = 1000
-          byte1();
-          byte0();
-          byte0();
-          byte0();
-          break;
-
-        case 'F': //Set Favorite (i.e. press and hold limit then immediately press up) = 0101
-          byte0();
-          byte1();
-          byte0();
-          byte1();
-          break;
-      }
-      break;
+  
+          case 'L': //Limit = 0000
+            byte0();
+            byte0();
+            byte0();
+            byte0();
+            break;
+  
+          case 'F': //Set Favorite (i.e. press and hold limit then immediately press up) = 1001
+            byte1();
+            byte0();
+            byte0();
+            byte1();
+            break;
+        }
+        break;
+  
+      default: //Any single channel
+        switch (tapOrHold){
+          case 'T': //Single channel tap
+            switch (command) {
+              case 'U': //single channel tap up = 0110
+                byte0();
+                byte1();
+                byte1();
+                byte0();
+                break;
+      
+              case 'D': //Single Channel tap Down = 1000
+                byte1();
+                byte0();
+                byte0();
+                byte0();
+                break;
+              }
+              break;
+          case 'H': //single channel hold
+            switch (command) {
+              case 'U': //single channel hold up = 1110
+                byte1();
+                byte1();
+                byte1();
+                byte0();
+                break;
+      
+              case 'D': //single channel hold down = 0100
+                byte0();
+                byte1();
+                byte0();
+                byte0();
+                break;
+              }
+              break;
+            }       
+        switch(command) {
+          case 'S': //Stop = 0111
+            byte0();
+            byte1();
+            byte1();
+            byte1();
+            break;
+  
+          case 'C': //Confirm = 0111
+            byte0();
+            byte1();
+            byte1();
+            byte1();
+            break;
+  
+          case 'L': //Limit = 1000
+            byte1();
+            byte0();
+            byte0();
+            byte0();
+            break;
+  
+          case 'F': //Set Favorite (i.e. press and hold limit then immediately press up) = 0101
+            byte0();
+            byte1();
+            byte0();
+            byte1();
+            break;
+        }
+        break;
+    }
+  }
+  else if ((strcmp(remoteID,"1010110110001010")==0)){
+    switch (command){
+          case 'U': //Up
+            switch (blindsChannel) {
+              case 'A': //All Up = 0100
+                byte0();
+                byte1();
+                byte0();
+                byte0();
+                break;
+      
+              default: //Any single channel up = 1100
+                byte1();
+                byte1();
+                byte0();
+                byte0();
+                break;
+              }
+             break;
+           case 'D': //Down
+            switch (blindsChannel) {
+              case 'A': //All Down = 1011
+                byte1();
+                byte0();
+                byte1();
+                byte1();
+                break;
+      
+              default: //Any single channel down = 0111
+                byte0();
+                byte1();
+                byte1();
+                byte1();
+                break;
+              }
+             break;
+          case 'S': //Stop
+            switch (blindsChannel) {
+              case 'A': //All Stop = 1001
+                byte1();
+                byte0();
+                byte0();
+                byte1();
+                break;
+      
+              default: //Any single channel stop = 0101
+                byte0();
+                byte1();
+                byte0();
+                byte1();
+                break;
+              }
+            break;
+          case 'C': //Confirm 1101
+            byte1();
+            byte1();
+            byte0();
+            byte1();
+            break;
+          case 'L': //Limit 1011
+            byte1();
+            byte0();
+            byte1();
+            byte1();
+            break;
+          case 'F': //LU= 0110
+            byte0();
+            byte1();
+            byte1();
+            byte0();
+            break;
+    }
   }
 }
 
@@ -752,6 +963,7 @@ void sendPreamble() {
   delayMicroseconds(b);
   digitalWrite(GPIOPIN, HIGH);
   delayMicroseconds(c);
+  //Serial.print("P");
 
 }
 
@@ -764,6 +976,7 @@ void byte0(void) {
   delayMicroseconds(BITLENGTH);
   digitalWrite(GPIOPIN, LOW);
   delayMicroseconds(BITLENGTH);
+//Serial.print("0");
 }
 
 void byte1(void) {
@@ -774,6 +987,7 @@ void byte1(void) {
   digitalWrite(GPIOPIN, HIGH);
   delayMicroseconds(BITLENGTH);
   digitalWrite(GPIOPIN, LOW);
+//Serial.print("1");
 }
 
 //Special final byte only used at message end:
@@ -785,6 +999,7 @@ void byteFinal(void) {
   digitalWrite(GPIOPIN, HIGH);
   delayMicroseconds(BITLENGTH);
   digitalWrite(GPIOPIN, LOW);
+  //Serial.print("2");
 }
 
 void adminMessageParser(byte* payload) {
@@ -873,8 +1088,8 @@ void publishBlindsConfig(const char* blindsName, const char* friendlyName) {
   configJson["qos"] = 0;
   configJson["retain"] = true;
   configJson["payload_open"] = "U";
-  configJson["payload_close"] = "D";
-  configJson["payload_stop"] = "S";
+  configJson["payload_close"] = "S";
+  configJson["payload_stop"] = "D";
   configJson["state_open"] = "open";
   configJson["state_opening"] = "opening";
   configJson["state_closed"] = "closed";
